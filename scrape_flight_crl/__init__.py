@@ -66,3 +66,22 @@ def get_arrivals(df):
 
 def get_departures(df):
     return df[df.index.get_level_values('connection').str.startswith('CRL')]
+
+
+def reshape_with_weekday_column(df):
+    """Returns the dataframe with added the column of the day of the week""" 
+    df_flat = df.reset_index()
+    # Find first weekday column
+    first_day_col = list(df_flat.columns).index("Mon.")
+    # Rename columns to make easy the sorting later
+    d = dict(zip(df_flat.columns[first_day_col:], range(7)))
+    df_flat.rename(columns=d, inplace=True)
+    # Reshape the dataframe creating a column 'weekday'
+    wd = df_flat.melt(id_vars=df_flat.columns[:7], value_vars=df_flat.columns[7:], var_name="weekday")
+    # Take only good rows and sort
+    wd_true = wd[wd.loc[:,"value"]].drop(columns="value")
+    wd_true_sorted = wd_true.sort_values(["connection", "weekday"]).reset_index(drop=True)
+    # Restore day names
+    wd_true_sorted['weekday'] = wd_true_sorted['weekday'].replace({v: k for k, v in d.items()})
+    df_weekdays = wd_true_sorted #.set_index(["connection", "weekday"])
+    return df_weekdays
